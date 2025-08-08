@@ -35,6 +35,7 @@ type Document struct {
 	// Non elements - helper fields
 	DocRels      Relationships // DocRels represents relationships specific to the document.
 	RID          int
+	FID          int // FID is used to generate unique IDs for footnotes.
 	relativePath string
 }
 
@@ -43,6 +44,12 @@ type Document struct {
 func (doc *Document) IncRelationID() int {
 	doc.RID += 1
 	return doc.RID
+}
+
+// IncFootnoteID increments the footnote ID of the document and returns the new ID.
+func (doc *Document) IncFootnoteID() int {
+	doc.FID += 1
+	return doc.FID
 }
 
 // MarshalXML implements the xml.Marshaler interface for the Document type.

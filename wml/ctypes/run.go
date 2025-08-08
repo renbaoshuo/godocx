@@ -96,9 +96,11 @@ type RunChild struct {
 	// w:pict    VML Object
 	// w:fldChar    Complex Field Character
 	// w:ruby    Phonetic Guide
-	// w:footnoteReference    Footnote Reference
 	// w:endnoteReference    Endnote Reference
 	// w:commentReference    Comment Content Reference Mark
+
+	//Footnote Reference
+	FootnoteReference *Markup `xml:"footnoteReference,omitempty"`
 
 	//Comment Content Reference Mark
 	CmntRef *Markup `xml:"commentReference,omitempty"`
@@ -204,6 +206,66 @@ loop:
 				r.Children = append(r.Children, RunChild{
 					Break: &br,
 				})
+			case "delText":
+				txt := NewText()
+				if err = d.DecodeElement(txt, &elem); err != nil {
+					return err
+				}
+				r.Children = append(r.Children, RunChild{DelText: txt})
+			case "delInstrText":
+				txt := NewText()
+				if err = d.DecodeElement(txt, &elem); err != nil {
+					return err
+				}
+				r.Children = append(r.Children, RunChild{DelInstrText: txt})
+			case "noBreakHyphen":
+				r.Children = append(r.Children, RunChild{NoBreakHyphen: &Empty{}})
+			case "softHyphen":
+				r.Children = append(r.Children, RunChild{SoftHyphen: &Empty{}})
+			case "dayShort":
+				r.Children = append(r.Children, RunChild{DayShort: &Empty{}})
+			case "monthShort":
+				r.Children = append(r.Children, RunChild{MonthShort: &Empty{}})
+			case "yearShort":
+				r.Children = append(r.Children, RunChild{YearShort: &Empty{}})
+			case "dayLong":
+				r.Children = append(r.Children, RunChild{DayLong: &Empty{}})
+			case "monthLong":
+				r.Children = append(r.Children, RunChild{MonthLong: &Empty{}})
+			case "yearLong":
+				r.Children = append(r.Children, RunChild{YearLong: &Empty{}})
+			case "annotationRef":
+				r.Children = append(r.Children, RunChild{AnnotationRef: &Empty{}})
+			case "footnoteRef":
+				r.Children = append(r.Children, RunChild{FootnoteRef: &Empty{}})
+			case "endnoteRef":
+				r.Children = append(r.Children, RunChild{EndnoteRef: &Empty{}})
+			case "separator":
+				r.Children = append(r.Children, RunChild{Separator: &Empty{}})
+			case "continuationSeparator":
+				r.Children = append(r.Children, RunChild{ContSeparator: &Empty{}})
+			case "sym":
+				sym := &Sym{}
+				if err = d.DecodeElement(sym, &elem); err != nil {
+					return err
+				}
+				r.Children = append(r.Children, RunChild{Sym: sym})
+			case "pgNum":
+				r.Children = append(r.Children, RunChild{PgNumBlock: &Empty{}})
+			case "cr":
+				r.Children = append(r.Children, RunChild{CarrRtn: &Empty{}})
+			case "ptab":
+				ptab := &PTab{}
+				if err = d.DecodeElement(ptab, &elem); err != nil {
+					return err
+				}
+				r.Children = append(r.Children, RunChild{PTab: ptab})
+			case "footnoteReference":
+				ref := &Markup{}
+				if err = d.DecodeElement(ref, &elem); err != nil {
+					return err
+				}
+				r.Children = append(r.Children, RunChild{FootnoteReference: ref})
 			case "drawing":
 				drawingElem := &dml.Drawing{}
 				if err = d.DecodeElement(drawingElem, &elem); err != nil {
@@ -213,6 +275,15 @@ loop:
 				r.Children = append(r.Children, RunChild{
 					Drawing: drawingElem,
 				})
+			case "lastRenderedPageBreak":
+				r.Children = append(r.Children, RunChild{LastRenPgBrk: &Empty{}})
+			case "commentReference":
+				ref := &Markup{}
+				if err = d.DecodeElement(ref, &elem); err != nil {
+					return err
+				}
+				r.Children = append(r.Children, RunChild{CmntRef: ref})
+
 			default:
 				if err = d.Skip(); err != nil {
 					return err
@@ -307,6 +378,8 @@ func (r *Run) MarshalChild(e *xml.Encoder) error {
 			err = child.PTab.MarshalXML(e, xml.StartElement{Name: xml.Name{Local: "w:ptab"}})
 		case child.CmntRef != nil:
 			err = child.CmntRef.MarshalXML(e, xml.StartElement{Name: xml.Name{Local: "w:commentReference"}})
+		case child.FootnoteReference != nil:
+			err = child.FootnoteReference.MarshalXML(e, xml.StartElement{Name: xml.Name{Local: "w:footnoteReference"}})
 
 		}
 

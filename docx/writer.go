@@ -81,6 +81,12 @@ func (rd *RootDoc) writeToZip(zw *zip.Writer) error {
 	}
 	rd.FileMap.Store(rd.DocStyles.RelativePath, docStyleBytes)
 
+	docFootnoteBytes, err := marshal(rd.Footnotes)
+	if err != nil {
+		return err
+	}
+	rd.FileMap.Store(rd.Footnotes.RelativePath, docFootnoteBytes)
+
 	rd.FileMap.Range(func(path, content any) bool {
 		files = append(files, path.(string))
 		return true

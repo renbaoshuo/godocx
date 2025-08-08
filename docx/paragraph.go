@@ -356,3 +356,23 @@ func (p *Paragraph) AddPicture(path string, width units.Inch, height units.Inch)
 		Inline: inline,
 	}, nil
 }
+
+// AddFootnoteReference adds a footnote reference to the paragraph.
+func (p *Paragraph) AddFootnoteReference(id int) {
+	run := &ctypes.Run{
+		Property: &ctypes.RunProperty{
+			Style: &ctypes.CTString{
+				Val: "FootnoteReference",
+			},
+		},
+		Children: []ctypes.RunChild{
+			{
+				FootnoteReference: &ctypes.Markup{
+					ID: id,
+				},
+			},
+		},
+	}
+
+	p.ct.Children = append(p.ct.Children, ctypes.ParagraphChild{Run: run})
+}

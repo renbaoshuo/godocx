@@ -112,14 +112,14 @@ func Unpack(content *[]byte) (*docx.RootDoc, error) {
 	for _, relation := range docRelations.Relationships {
 		rID += 1
 		switch relation.Type {
-		case constants.StylesType:
+		case constants.STYLES_TYPE:
 			sFileName := relation.Target
 			if sFileName == "" {
 				continue
 			}
 			stylesPath := path.Join(wordDir, sFileName)
 
-			//Load Styles
+			// Load Styles
 			stylesFile := fileIndex[stylesPath]
 			stylesObj, err := docx.LoadStyles(stylesPath, stylesFile)
 			if err != nil {
@@ -127,10 +127,39 @@ func Unpack(content *[]byte) (*docx.RootDoc, error) {
 			}
 			delete(fileIndex, stylesPath)
 			rd.DocStyles = stylesObj
+
+		case constants.FOOTNOTES_TYPE:
+			fnFileName := relation.Target
+			if fnFileName == "" {
+				continue
+			}
+			footnotesPath := path.Join(wordDir, fnFileName)
+
+			// Load Footnotes
+			footnotesFile := fileIndex[footnotesPath]
+			footnotesObj, err := docx.LoadFootnotes(footnotesPath, footnotesFile)
+			if err != nil {
+				return nil, err
+			}
+			delete(fileIndex, footnotesPath)
+			rd.Footnotes = footnotesObj
 		}
 	}
 
 	rd.Document.RID = rID
+	rd.Document.FID = func() int {
+		fID := 0
+
+		if rd.Footnotes != nil {
+			for _, footnote := range rd.Footnotes.Footnotes {
+				if footnote.ID > fID {
+					fID = footnote.ID
+				}
+			}
+		}
+
+		return fID
+	}()
 
 	for fileName, fileContent := range fileIndex {
 		if strings.HasPrefix(fileName, constants.MediaPath) {
