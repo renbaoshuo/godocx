@@ -15,8 +15,9 @@ type RootDoc struct {
 	FileMap     sync.Map      // FileMap is a synchronized map for managing files related to the document.
 	RootRels    Relationships // RootRels represents relationships at the root level.
 	ContentType ContentTypes
-	Document    *Document      // Document is the main document structure.
-	DocStyles   *ctypes.Styles // Document styles
+	Document    *Document                // Document is the main document structure.
+	DocStyles   *ctypes.Styles           // Document styles
+	DocSettings *ctypes.DocumentSettings // Document settings
 
 	rID        int // rId is used to generate unique relationship IDs.
 	ImageCount uint
@@ -60,4 +61,16 @@ func LoadStyles(fileName string, fileBytes []byte) (*ctypes.Styles, error) {
 
 	styles.RelativePath = fileName
 	return &styles, nil
+}
+
+// Load settings.xml into Settings struct
+func LoadDocumentSettings(fileName string, fileBytes []byte) (*ctypes.DocumentSettings, error) {
+	settings := ctypes.DocumentSettings{}
+	err := xml.Unmarshal(fileBytes, &settings)
+	if err != nil {
+		return nil, err
+	}
+
+	settings.RelativePath = fileName
+	return &settings, nil
 }

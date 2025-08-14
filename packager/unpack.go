@@ -112,6 +112,22 @@ func Unpack(content *[]byte) (*docx.RootDoc, error) {
 	for _, relation := range docRelations.Relationships {
 		rID += 1
 		switch relation.Type {
+		case constants.SETTINGS_TYPE:
+			stFileName := relation.Target
+			if stFileName == "" {
+				continue
+			}
+			settingsPath := path.Join(wordDir, stFileName)
+
+			// Load Settings
+			settingsFile := fileIndex[settingsPath]
+			settingsObj, err := docx.LoadDocumentSettings(settingsPath, settingsFile)
+			if err != nil {
+				return nil, err
+			}
+			delete(fileIndex, settingsPath)
+			rd.DocSettings = settingsObj
+
 		case constants.StylesType:
 			sFileName := relation.Target
 			if sFileName == "" {
