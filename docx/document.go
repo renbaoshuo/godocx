@@ -34,7 +34,8 @@ type Document struct {
 
 	// Non elements - helper fields
 	DocRels      Relationships // DocRels represents relationships specific to the document.
-	RID          int
+	RID          int           // RID is used to generate unique IDs for relationships.
+	AID          int           // AID is used to generate unique IDs for annotations (rPrChange, del, ins, etc.)
 	relativePath string
 }
 
@@ -43,6 +44,12 @@ type Document struct {
 func (doc *Document) IncRelationID() int {
 	doc.RID += 1
 	return doc.RID
+}
+
+// IncAnnotationID increments the annotation ID of the document and returns the new ID.
+func (doc *Document) IncAnnotationID() int {
+	doc.AID += 1
+	return doc.AID
 }
 
 // MarshalXML implements the xml.Marshaler interface for the Document type.

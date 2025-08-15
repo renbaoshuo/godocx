@@ -25,8 +25,9 @@ type Paragraph struct {
 }
 
 type ParagraphChild struct {
-	Link *Hyperlink // w:hyperlink
-	Run  *Run       // i.e w:r
+	Link   *Hyperlink      // w:hyperlink
+	Run    *Run            // i.e w:r
+	Change *RunTrackChange // w:ins, w:del
 }
 
 type Hyperlink struct {
@@ -84,6 +85,12 @@ func (p Paragraph) MarshalXML(e *xml.Encoder, start xml.StartElement) (err error
 				return err
 			}
 		}
+
+		if cElem.Change != nil {
+			if err = cElem.Change.MarshalXML(e, xml.StartElement{}); err != nil {
+				return err
+			}
+		}
 	}
 
 	// Closing </w:p> element
@@ -129,6 +136,24 @@ loop:
 				if err = d.DecodeElement(p.Property, &elem); err != nil {
 					return err
 				}
+			case "ins":
+				ins := &RunTrackChange{}
+				ins.Type = RunTrackChangeTypeInsert
+				if err = d.DecodeElement(ins, &elem); err != nil {
+					return err
+				}
+				p.Children = append(p.Children, ParagraphChild{
+					Change: ins,
+				})
+			case "del":
+				del := &RunTrackChange{}
+				del.Type = RunTrackChangeTypeDelete
+				if err = d.DecodeElement(del, &elem); err != nil {
+					return err
+				}
+				p.Children = append(p.Children, ParagraphChild{
+					Change: del,
+				})
 			default:
 				if err = d.Skip(); err != nil {
 					return err

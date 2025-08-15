@@ -220,13 +220,42 @@ func (rd *RootDoc) AddEmptyParagraph() *Paragraph {
 	return p
 }
 
+// AddRun adds a new Run to the Paragraph.
+//
+// Returns:
+//   - run: The newly created Run instance added to the Paragraph.
 func (p *Paragraph) AddRun() *Run {
-
 	run := &ctypes.Run{}
 
 	p.ct.Children = append(p.ct.Children, ctypes.ParagraphChild{Run: run})
 
 	return newRun(p.root, run)
+}
+
+// AddIns adds a new inserted RunTrackChange to the Paragraph.
+//
+// Returns:
+//   - *RunTrackChange: The newly created RunTrackChange instance added to the Paragraph.
+func (p *Paragraph) AddIns(author string, date *string) *RunTrackChange {
+	id := p.root.Document.IncAnnotationID()
+	ins := ctypes.NewRunTrackChangeIns(id, author, date)
+	p.ct.Children = append(p.ct.Children, ctypes.ParagraphChild{
+		Change: ins,
+	})
+	return newRunTrackChange(p.root, ins)
+}
+
+// AddDel adds a new deleted RunTrackChange to the Paragraph.
+//
+// Returns:
+//   - *RunTrackChange: The newly created RunTrackChange instance added to the Paragraph.
+func (p *Paragraph) AddDel(author string, date *string) *RunTrackChange {
+	id := p.root.Document.IncAnnotationID()
+	del := ctypes.NewRunTrackChangeDel(id, author, date)
+	p.ct.Children = append(p.ct.Children, ctypes.ParagraphChild{
+		Change: del,
+	})
+	return newRunTrackChange(p.root, del)
 }
 
 // GetStyle retrieves the style information applied to the Paragraph.
