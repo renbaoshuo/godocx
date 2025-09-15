@@ -26,6 +26,11 @@ type Override struct {
 }
 
 func (c *ContentTypes) AddExtension(extension, contentType string) error {
+	for _, d := range c.Default {
+		if d.Extension == extension {
+			return nil
+		}
+	}
 	c.Default = append(c.Default, Default{
 		Extension:   extension,
 		ContentType: contentType,
@@ -35,6 +40,11 @@ func (c *ContentTypes) AddExtension(extension, contentType string) error {
 }
 
 func (c *ContentTypes) AddOverride(partName, contentType string) error {
+	for _, o := range c.Override {
+		if o.PartName == partName {
+			return nil
+		}
+	}
 	c.Override = append(c.Override, Override{
 		PartName:    partName,
 		ContentType: contentType,
@@ -43,9 +53,7 @@ func (c *ContentTypes) AddOverride(partName, contentType string) error {
 }
 
 func MIMEFromExt(extension string) (string, error) {
-	if strings.HasPrefix(extension, ".") {
-		extension = strings.TrimPrefix(extension, ".")
-	}
+	extension = strings.TrimPrefix(extension, ".")
 
 	switch extension {
 	case "rels":
@@ -56,8 +64,6 @@ func MIMEFromExt(extension string) (string, error) {
 		return "image/jpeg", nil
 	case "png":
 		return "image/png", nil
-	case "svg":
-		return "image/svg+xml", nil
 	case "gif":
 		return "image/gif", nil
 	case "bmp":
@@ -88,6 +94,8 @@ func MIMEFromExt(extension string) (string, error) {
 		return "video/mp4", nil
 	case "mp3":
 		return "audio/mpeg", nil
+	case "webp":
+		return "image/webp", nil
 	default:
 		return "", errors.New("unsupported file extension")
 	}

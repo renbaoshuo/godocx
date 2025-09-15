@@ -14,7 +14,7 @@ const (
 )
 
 type Drawing struct {
-	Inline []Inline  `xml:"inline,omitempty"`
+	Inline []*Inline `xml:"inline,omitempty"`
 	Anchor []*Anchor `xml:"anchor,omitempty"`
 }
 
@@ -42,7 +42,7 @@ loop:
 					return err
 				}
 
-				dr.Inline = append(dr.Inline, il)
+				dr.Inline = append(dr.Inline, &il)
 			default:
 				if err = d.Skip(); err != nil {
 					return err

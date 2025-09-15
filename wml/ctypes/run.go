@@ -2,6 +2,7 @@ package ctypes
 
 import (
 	"encoding/xml"
+
 	"github.com/gomutex/godocx/dml"
 	"github.com/gomutex/godocx/internal"
 	"github.com/gomutex/godocx/wml/stypes"
@@ -90,16 +91,18 @@ type RunChild struct {
 	//Tab Character
 	Tab *Empty `xml:"tab,omitempty"`
 
-	// Picture reference
-	Pict *Pict `xml:"pict,omitempty"`
+	//Complex Field Character
+	FldChar *FldChar `xml:"fldChar,omitempty"`
 
 	//TODO:
 	// 	w:object    Inline Embedded Object
-	// w:fldChar    Complex Field Character
+	// w:pict    VML Object
 	// w:ruby    Phonetic Guide
-	// w:footnoteReference    Footnote Reference
 	// w:endnoteReference    Endnote Reference
 	// w:commentReference    Comment Content Reference Mark
+
+	//Footnote Reference
+	FootnoteReference *Markup `xml:"footnoteReference,omitempty"`
 
 	//Comment Content Reference Mark
 	CmntRef *Markup `xml:"commentReference,omitempty"`
@@ -182,6 +185,20 @@ loop:
 				}
 
 				r.Children = append(r.Children, RunChild{Text: txt})
+			case "instrText":
+				instrTxt := NewText()
+				if err = d.DecodeElement(instrTxt, &elem); err != nil {
+					return err
+				}
+
+				r.Children = append(r.Children, RunChild{InstrText: instrTxt})
+			case "fldChar":
+				fldChar := &FldChar{}
+				if err = d.DecodeElement(fldChar, &elem); err != nil {
+					return err
+				}
+
+				r.Children = append(r.Children, RunChild{FldChar: fldChar})
 			case "rPr":
 				r.Property = &RunProperty{}
 				if err = d.DecodeElement(r.Property, &elem); err != nil {
@@ -205,6 +222,66 @@ loop:
 				r.Children = append(r.Children, RunChild{
 					Break: &br,
 				})
+			case "delText":
+				txt := NewText()
+				if err = d.DecodeElement(txt, &elem); err != nil {
+					return err
+				}
+				r.Children = append(r.Children, RunChild{DelText: txt})
+			case "delInstrText":
+				txt := NewText()
+				if err = d.DecodeElement(txt, &elem); err != nil {
+					return err
+				}
+				r.Children = append(r.Children, RunChild{DelInstrText: txt})
+			case "noBreakHyphen":
+				r.Children = append(r.Children, RunChild{NoBreakHyphen: &Empty{}})
+			case "softHyphen":
+				r.Children = append(r.Children, RunChild{SoftHyphen: &Empty{}})
+			case "dayShort":
+				r.Children = append(r.Children, RunChild{DayShort: &Empty{}})
+			case "monthShort":
+				r.Children = append(r.Children, RunChild{MonthShort: &Empty{}})
+			case "yearShort":
+				r.Children = append(r.Children, RunChild{YearShort: &Empty{}})
+			case "dayLong":
+				r.Children = append(r.Children, RunChild{DayLong: &Empty{}})
+			case "monthLong":
+				r.Children = append(r.Children, RunChild{MonthLong: &Empty{}})
+			case "yearLong":
+				r.Children = append(r.Children, RunChild{YearLong: &Empty{}})
+			case "annotationRef":
+				r.Children = append(r.Children, RunChild{AnnotationRef: &Empty{}})
+			case "footnoteRef":
+				r.Children = append(r.Children, RunChild{FootnoteRef: &Empty{}})
+			case "endnoteRef":
+				r.Children = append(r.Children, RunChild{EndnoteRef: &Empty{}})
+			case "separator":
+				r.Children = append(r.Children, RunChild{Separator: &Empty{}})
+			case "continuationSeparator":
+				r.Children = append(r.Children, RunChild{ContSeparator: &Empty{}})
+			case "sym":
+				sym := &Sym{}
+				if err = d.DecodeElement(sym, &elem); err != nil {
+					return err
+				}
+				r.Children = append(r.Children, RunChild{Sym: sym})
+			case "pgNum":
+				r.Children = append(r.Children, RunChild{PgNumBlock: &Empty{}})
+			case "cr":
+				r.Children = append(r.Children, RunChild{CarrRtn: &Empty{}})
+			case "ptab":
+				ptab := &PTab{}
+				if err = d.DecodeElement(ptab, &elem); err != nil {
+					return err
+				}
+				r.Children = append(r.Children, RunChild{PTab: ptab})
+			case "footnoteReference":
+				ref := &Markup{}
+				if err = d.DecodeElement(ref, &elem); err != nil {
+					return err
+				}
+				r.Children = append(r.Children, RunChild{FootnoteReference: ref})
 			case "drawing":
 				drawingElem := &dml.Drawing{}
 				if err = d.DecodeElement(drawingElem, &elem); err != nil {
@@ -214,22 +291,23 @@ loop:
 				r.Children = append(r.Children, RunChild{
 					Drawing: drawingElem,
 				})
-			case "pict":
-				pictElem := &Pict{}
-				if err = d.DecodeElement(pictElem, &elem); err != nil {
+			case "lastRenderedPageBreak":
+				r.Children = append(r.Children, RunChild{LastRenPgBrk: &Empty{}})
+			case "commentReference":
+				ref := &Markup{}
+				if err = d.DecodeElement(ref, &elem); err != nil {
 					return err
 				}
-
-				r.Children = append(r.Children, RunChild{
-					Pict: pictElem,
-				})
+				r.Children = append(r.Children, RunChild{CmntRef: ref})
 			default:
 				if err = d.Skip(); err != nil {
 					return err
 				}
 			}
 		case xml.EndElement:
-			break loop
+			if elem.Name.Local == start.Name.Local {
+				break loop
+			}
 		}
 	}
 
@@ -275,6 +353,8 @@ func (r *Run) MarshalChild(e *xml.Encoder) error {
 			err = child.InstrText.MarshalXML(e, xml.StartElement{Name: xml.Name{Local: "w:instrText"}})
 		case child.DelInstrText != nil:
 			err = child.DelInstrText.MarshalXML(e, xml.StartElement{Name: xml.Name{Local: "w:delInstrText"}})
+		case child.FldChar != nil:
+			err = child.FldChar.MarshalXML(e, xml.StartElement{Name: xml.Name{Local: "w:fldChar"}})
 		case child.NoBreakHyphen != nil:
 			err = child.NoBreakHyphen.MarshalXML(e, xml.StartElement{Name: xml.Name{Local: "w:noBreakHyphen"}})
 		case child.SoftHyphen != nil:
@@ -311,14 +391,14 @@ func (r *Run) MarshalChild(e *xml.Encoder) error {
 			err = child.Tab.MarshalXML(e, xml.StartElement{Name: xml.Name{Local: "w:tab"}})
 		case child.Drawing != nil:
 			err = child.Drawing.MarshalXML(e, xml.StartElement{Name: xml.Name{Local: "w:drawing"}})
-		case child.Pict != nil:
-			err = child.Pict.MarshalXML(e, xml.StartElement{Name: xml.Name{Local: "w:pict"}})
 		case child.LastRenPgBrk != nil:
 			err = child.LastRenPgBrk.MarshalXML(e, xml.StartElement{Name: xml.Name{Local: "w:lastRenderedPageBreak"}})
 		case child.PTab != nil:
 			err = child.PTab.MarshalXML(e, xml.StartElement{Name: xml.Name{Local: "w:ptab"}})
 		case child.CmntRef != nil:
 			err = child.CmntRef.MarshalXML(e, xml.StartElement{Name: xml.Name{Local: "w:commentReference"}})
+		case child.FootnoteReference != nil:
+			err = child.FootnoteReference.MarshalXML(e, xml.StartElement{Name: xml.Name{Local: "w:footnoteReference"}})
 
 		}
 

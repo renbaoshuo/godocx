@@ -2,25 +2,26 @@ package docx
 
 import (
 	"encoding/xml"
+	"fmt"
 
 	"github.com/gomutex/godocx/internal"
 	"github.com/gomutex/godocx/wml/stypes"
 )
 
-var docAttrs = []xml.Attr{
-	{Name: xml.Name{Local: "xmlns:w"}, Value: "http://schemas.openxmlformats.org/wordprocessingml/2006/main"},
-	{Name: xml.Name{Local: "xmlns:o"}, Value: "urn:schemas-microsoft-com:office:office"},
-	{Name: xml.Name{Local: "xmlns:r"}, Value: "http://schemas.openxmlformats.org/officeDocument/2006/relationships"},
-	{Name: xml.Name{Local: "xmlns:v"}, Value: "urn:schemas-microsoft-com:vml"},
-	{Name: xml.Name{Local: "xmlns:w10"}, Value: "urn:schemas-microsoft-com:office:word"},
-	{Name: xml.Name{Local: "xmlns:wp"}, Value: "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"},
-	{Name: xml.Name{Local: "xmlns:wps"}, Value: "http://schemas.microsoft.com/office/word/2010/wordprocessingShape"},
-	{Name: xml.Name{Local: "xmlns:wpg"}, Value: "http://schemas.microsoft.com/office/word/2010/wordprocessingGroup"},
-	{Name: xml.Name{Local: "xmlns:mc"}, Value: "http://schemas.openxmlformats.org/markup-compatibility/2006"},
-	{Name: xml.Name{Local: "xmlns:wp14"}, Value: "http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing"},
-	{Name: xml.Name{Local: "xmlns:w14"}, Value: "http://schemas.microsoft.com/office/word/2010/wordml"},
-	{Name: xml.Name{Local: "xmlns:w15"}, Value: "http://schemas.microsoft.com/office/word/2012/wordml"},
-	{Name: xml.Name{Local: "mc:Ignorable"}, Value: "w14 wp14 w15"},
+var docAttrs = map[string]string{
+	"xmlns:w":      "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
+	"xmlns:o":      "urn:schemas-microsoft-com:office:office",
+	"xmlns:r":      "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+	"xmlns:v":      "urn:schemas-microsoft-com:vml",
+	"xmlns:w10":    "urn:schemas-microsoft-com:office:word",
+	"xmlns:wp":     "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing",
+	"xmlns:wps":    "http://schemas.microsoft.com/office/word/2010/wordprocessingShape",
+	"xmlns:wpg":    "http://schemas.microsoft.com/office/word/2010/wordprocessingGroup",
+	"xmlns:mc":     "http://schemas.openxmlformats.org/markup-compatibility/2006",
+	"xmlns:wp14":   "http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing",
+	"xmlns:w14":    "http://schemas.microsoft.com/office/word/2010/wordml",
+	"xmlns:w15":    "http://schemas.microsoft.com/office/word/2012/wordml",
+	"mc:Ignorable": "w14 wp14 w15",
 }
 
 // This element specifies the contents of a main document part in a WordprocessingML document.
@@ -34,7 +35,10 @@ type Document struct {
 
 	// Non elements - helper fields
 	DocRels      Relationships // DocRels represents relationships specific to the document.
-	RID          int
+	RID          int           // RID is used to generate unique IDs for relationships.
+	BID          int           // BID is used to generate unique IDs for bookmarks.
+	FID          int           // FID is used to generate unique IDs for footnotes.
+	AID          int           // AID is used to generate unique IDs for annotations (rPrChange, del, ins, etc.)
 	relativePath string
 }
 
@@ -45,11 +49,47 @@ func (doc *Document) IncRelationID() int {
 	return doc.RID
 }
 
+// IncBookmarkID increments the bookmark ID of the document and returns the new ID.
+// This method is used to generate unique IDs for bookmarks within the document.
+func (doc *Document) IncBookmarkID() int {
+	doc.BID += 1
+	return doc.BID
+}
+
+// UpdateBookmarkID updates the bookmark ID in the document if the provided ID is greater than the current one.
+func (doc *Document) UpdateBookmarkID(id int) {
+	if id > doc.BID {
+		doc.BID = id
+	}
+}
+
+// IncFootnoteID increments the footnote ID of the document and returns the new ID.
+func (doc *Document) IncFootnoteID() int {
+	doc.FID += 1
+	return doc.FID
+}
+
+// IncAnnotationID increments the annotation ID of the document and returns the new ID.
+func (doc *Document) IncAnnotationID() int {
+	doc.AID += 1
+	return doc.AID
+}
+
+// UpdateAnnotationID updates the annotation ID in the document if the provided ID is greater than the current one.
+func (doc *Document) updateAnnotationID(id int) {
+	if id > doc.AID {
+		doc.AID = id
+	}
+}
+
 // MarshalXML implements the xml.Marshaler interface for the Document type.
 func (doc Document) MarshalXML(e *xml.Encoder, start xml.StartElement) (err error) {
 	start.Name.Local = "w:document"
 
-	start.Attr = append(start.Attr, docAttrs...)
+	for key, value := range docAttrs {
+		attr := xml.Attr{Name: xml.Name{Local: key}, Value: value}
+		start.Attr = append(start.Attr, attr)
+	}
 
 	err = e.EncodeToken(start)
 	if err != nil {
@@ -121,4 +161,23 @@ func (rd *RootDoc) AddPageBreak() *Paragraph {
 	p.AddRun().AddBreak(internal.ToPtr(stypes.BreakTypePage))
 
 	return p
+}
+
+// ProcessDocumentFields processes all complex fields in the document and converts them to appropriate formats
+func (rd *RootDoc) ProcessDocumentFields() error {
+	parser := NewFieldParser(rd)
+
+	if rd.Document.Body == nil {
+		return nil
+	}
+
+	for _, child := range rd.Document.Body.Children {
+		if child.Para != nil {
+			if err := parser.ParseParagraphFields(child.Para); err != nil {
+				return fmt.Errorf("failed to process paragraph fields: %w", err)
+			}
+		}
+	}
+
+	return nil
 }

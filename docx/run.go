@@ -22,6 +22,11 @@ func (r *Run) getProp() *ctypes.RunProperty {
 	return r.ct.Property
 }
 
+// GetCT returns the underlying run element.
+func (r *Run) GetCT() *ctypes.Run {
+	return r.ct
+}
+
 // Sets the color of the Run.
 //
 // Example:
@@ -204,4 +209,78 @@ func (r *Run) Style(value string) *Run {
 func (r *Run) VerticalAlign(value stypes.VerticalAlignRun) *Run {
 	r.getProp().VertAlign = ctypes.NewGenSingleStrVal(value)
 	return r
+}
+
+// AddFldChar adds a field character to the run
+func (r *Run) AddFldChar(fldCharType stypes.FldCharType) *Run {
+	fldChar := &ctypes.FldChar{
+		FldCharType: fldCharType,
+	}
+	r.ct.Children = append(r.ct.Children, ctypes.RunChild{
+		FldChar: fldChar,
+	})
+	return r
+}
+
+// AddInstrText adds instruction text to the run
+func (r *Run) AddInstrText(text string) *Run {
+	instrText := ctypes.TextFromString(text)
+	r.ct.Children = append(r.ct.Children, ctypes.RunChild{
+		InstrText: instrText,
+	})
+	return r
+}
+
+// AddDelInstrText adds deletion instruction text to the run
+func (r *Run) AddDelInstrText(text string) *Run {
+	delInstrText := ctypes.TextFromString(text)
+	r.ct.Children = append(r.ct.Children, ctypes.RunChild{
+		DelInstrText: delInstrText,
+	})
+	return r
+}
+
+// AddText adds text to the run
+func (r *Run) AddText(text string) *Run {
+	textElement := ctypes.TextFromString(text)
+	r.ct.Children = append(r.ct.Children, ctypes.RunChild{
+		Text: textElement,
+	})
+	return r
+}
+
+// AddDelText adds deletion text to the run
+func (r *Run) AddDelText(text string) *Run {
+	delText := ctypes.TextFromString(text)
+	r.ct.Children = append(r.ct.Children, ctypes.RunChild{
+		DelText: delText,
+	})
+	return r
+}
+
+// ClonePropertyToRevision clones the run properties to a revision run property.
+// This method creates a revision tracking entry (rPrChange) that contains a snapshot of the current
+// run properties. Any existing rPrChange is replaced to avoid creating history of history.
+func (r *Run) ClonePropertyToRevision(author string, date *string) {
+	if r.ct.Property == nil {
+		r.ct.Property = &ctypes.RunProperty{}
+	}
+
+	id := r.root.Document.IncAnnotationID()
+
+	// Clone the current run properties, excluding any existing rPrChange
+	clonedProp := r.ct.Property.Clone()
+
+	// Create a new rPrChange with the cloned properties
+	rPrChange := &ctypes.RPrChange{
+		TrackChange: ctypes.TrackChange{
+			ID:     id,
+			Author: author,
+			Date:   date,
+		},
+		Prop: clonedProp,
+	}
+
+	// Assign the new rPrChange to the run properties, replacing any existing one
+	r.getProp().RPrChange = rPrChange
 }

@@ -19,8 +19,15 @@ import (
 
 // Paragraph represents a paragraph in a DOCX document.
 type Paragraph struct {
-	root *RootDoc         // root is a reference to the root document.
-	ct   ctypes.Paragraph // ct holds the underlying Paragraph Complex Type.
+	root *RootDoc          // root is a reference to the root document.
+	ct   *ctypes.Paragraph // ct holds the underlying Paragraph Complex Type.
+}
+
+func NewParagraph(root *RootDoc, ct *ctypes.Paragraph) *Paragraph {
+	return &Paragraph{
+		root: root,
+		ct:   ct,
+	}
 }
 
 func (p *Paragraph) unmarshalXML(d *xml.Decoder, start xml.StartElement) error {
@@ -42,6 +49,9 @@ type paraOption func(*Paragraph)
 func newParagraph(root *RootDoc, opts ...paraOption) *Paragraph {
 	p := &Paragraph{
 		root: root,
+		ct: &ctypes.Paragraph{
+			Children: make([]ctypes.ParagraphChild, 0),
+		},
 	}
 	for _, opt := range opts {
 		opt(p)
@@ -64,7 +74,7 @@ func (p *Paragraph) ensureProp() {
 
 // GetCT returns a pointer to the underlying Paragraph Complex Type.
 func (p *Paragraph) GetCT() *ctypes.Paragraph {
-	return &p.ct
+	return p.ct
 }
 
 // AddParagraph adds a new paragraph with the specified text to the document.
@@ -76,13 +86,9 @@ func (p *Paragraph) GetCT() *ctypes.Paragraph {
 // Returns:
 //   - p: The created Paragraph instance.
 func (rd *RootDoc) AddParagraph(text string) *Paragraph {
-	p := newParagraph(rd)
-	p.AddText(text)
-	bodyElem := DocumentChild{
-		Para: p,
-	}
-	rd.Document.Body.Children = append(rd.Document.Body.Children, bodyElem)
+	p := rd.AddEmptyParagraph()
 
+	p.AddText(text)
 	return p
 }
 
@@ -220,13 +226,42 @@ func (rd *RootDoc) AddEmptyParagraph() *Paragraph {
 	return p
 }
 
+// AddRun adds a new Run to the Paragraph.
+//
+// Returns:
+//   - run: The newly created Run instance added to the Paragraph.
 func (p *Paragraph) AddRun() *Run {
-
 	run := &ctypes.Run{}
 
 	p.ct.Children = append(p.ct.Children, ctypes.ParagraphChild{Run: run})
 
 	return newRun(p.root, run)
+}
+
+// AddIns adds a new inserted RunTrackChange to the Paragraph.
+//
+// Returns:
+//   - *RunTrackChange: The newly created RunTrackChange instance added to the Paragraph.
+func (p *Paragraph) AddIns(author string, date *string) *RunTrackChange {
+	id := p.root.Document.IncAnnotationID()
+	ins := ctypes.NewRunTrackChangeIns(id, author, date)
+	p.ct.Children = append(p.ct.Children, ctypes.ParagraphChild{
+		Change: ins,
+	})
+	return newRunTrackChange(p.root, ins)
+}
+
+// AddDel adds a new deleted RunTrackChange to the Paragraph.
+//
+// Returns:
+//   - *RunTrackChange: The newly created RunTrackChange instance added to the Paragraph.
+func (p *Paragraph) AddDel(author string, date *string) *RunTrackChange {
+	id := p.root.Document.IncAnnotationID()
+	del := ctypes.NewRunTrackChangeDel(id, author, date)
+	p.ct.Children = append(p.ct.Children, ctypes.ParagraphChild{
+		Change: del,
+	})
+	return newRunTrackChange(p.root, del)
 }
 
 // GetStyle retrieves the style information applied to the Paragraph.
@@ -247,6 +282,14 @@ func (p *Paragraph) GetStyle() (*ctypes.Style, error) {
 	return style, nil
 }
 
+// AddLink adds a external hyperlink to the Paragraph.
+//
+// Parameters:
+//   - text: The text to be displayed for the hyperlink.
+//   - link: The URL or location of the hyperlink.
+//
+// Returns:
+//   - *Hyperlink: The created Hyperlink instance representing the added link.
 func (p *Paragraph) AddLink(text string, link string) *Hyperlink {
 	rId := p.root.Document.addLinkRelation(link)
 
@@ -266,6 +309,40 @@ func (p *Paragraph) AddLink(text string, link string) *Hyperlink {
 	hyperLink := &ctypes.Hyperlink{
 		ID:  rId,
 		Run: run,
+	}
+
+	p.ct.Children = append(p.ct.Children, ctypes.ParagraphChild{Link: hyperLink})
+
+	return newHyperlink(p.root, hyperLink)
+}
+
+// AddInternalLink adds a hyperlink to an internal anchor within the document.
+//
+// Parameters:
+//   - text: The text to be displayed for the hyperlink.
+//   - anchor: Specifies the name of a bookmark within the document. If it is not a
+//     valid bookmark, the default behavior is to navigate to the start of
+//     the document. Example bookmark: <w:bookmarkStart w:id="0" w:name="exampleAnchorName"/>
+//
+// Returns:
+//   - *Hyperlink: The created Hyperlink instance representing the internal link.
+func (p *Paragraph) AddInternalLink(text string, anchor string) *Hyperlink {
+	runChildren := []ctypes.RunChild{}
+	runChildren = append(runChildren, ctypes.RunChild{
+		Text: ctypes.TextFromString(text),
+	})
+	run := &ctypes.Run{
+		Children: runChildren,
+		Property: &ctypes.RunProperty{
+			Style: &ctypes.CTString{
+				Val: constants.HyperLinkStyle,
+			},
+		},
+	}
+
+	hyperLink := &ctypes.Hyperlink{
+		Anchor: anchor,
+		Run:    run,
 	}
 
 	p.ct.Children = append(p.ct.Children, ctypes.ParagraphChild{Link: hyperLink})
@@ -311,11 +388,10 @@ func (p *Paragraph) addDrawing(rID string, imgCount uint, width units.Inch, heig
 
 	p.ct.Children = append(p.ct.Children, ctypes.ParagraphChild{Run: run})
 
-	return &inline
+	return inline
 }
 
 func (p *Paragraph) AddPicture(path string, width units.Inch, height units.Inch) (*PicMeta, error) {
-
 	imgBytes, err := internal.FileToByte(path)
 	if err != nil {
 		return nil, err
@@ -355,4 +431,162 @@ func (p *Paragraph) AddPicture(path string, width units.Inch, height units.Inch)
 		Para:   p,
 		Inline: inline,
 	}, nil
+}
+
+// AddBookmarkStart adds a bookmark start to the Paragraph.
+//
+// Parameters:
+//   - name: The name of the bookmark.
+//
+// Returns:
+//   - int: The ID of the bookmark start.
+//     This ID is used to uniquely identify the bookmark within the document.
+func (p *Paragraph) AddBookmarkStart(name string) int {
+	id := p.root.Document.IncBookmarkID()
+
+	bookmarkStart := &ctypes.BookmarkStart{
+		ID:   id, // ID is not used in the current implementation
+		Name: name,
+	}
+
+	p.ct.Children = append(p.ct.Children, ctypes.ParagraphChild{
+		Bookmark: &ctypes.Bookmark{
+			Start: bookmarkStart,
+		},
+	})
+
+	return id
+}
+
+// AddBookmarkEnd adds a bookmark end to the Paragraph.
+//
+// Parameters:
+//   - id: The ID of the bookmark to end.
+func (p *Paragraph) AddBookmarkEnd(id int) {
+	bookmarkEnd := &ctypes.BookmarkEnd{
+		ID: id, // ID is not used in the current implementation
+	}
+
+	p.ct.Children = append(p.ct.Children, ctypes.ParagraphChild{
+		Bookmark: &ctypes.Bookmark{
+			End: bookmarkEnd,
+		},
+	})
+}
+
+// AddFootnoteRef adds a footnote reference mark to the Paragraph.
+//
+// 17.11.13 footnoteRef (Footnote Reference Mark)
+//
+// This method should be used when you want to insert a reference to a
+// footnote content. For document body's paragraphs, please use
+// [AddFootnoteReference] instead.
+func (p *Paragraph) AddFootnoteRef() {
+	run := &ctypes.Run{
+		Property: &ctypes.RunProperty{
+			Style: &ctypes.CTString{
+				Val: "FootnoteReference",
+			},
+		},
+		Children: []ctypes.RunChild{
+			{
+				FootnoteRef: &ctypes.Empty{},
+			},
+		},
+	}
+
+	p.ct.Children = append(p.ct.Children, ctypes.ParagraphChild{Run: run})
+}
+
+// AddFootnoteReference adds a footnote reference to the paragraph.
+func (p *Paragraph) AddFootnoteReference(id int) {
+	run := &ctypes.Run{
+		Property: &ctypes.RunProperty{
+			Style: &ctypes.CTString{
+				Val: "FootnoteReference",
+			},
+		},
+		Children: []ctypes.RunChild{
+			{
+				FootnoteReference: &ctypes.Markup{
+					ID: id,
+				},
+			},
+		},
+	}
+
+	p.ct.Children = append(p.ct.Children, ctypes.ParagraphChild{Run: run})
+}
+
+// ClonePropertyToRevision creates a deep copy of the current paragraph properties
+// and assigns it to a PPrChange structure. If there's an existing PPrChange,
+// it will be replaced with the new cloned properties.
+//
+// This method is useful for revision tracking where you want to preserve the
+// current state of paragraph properties before making changes.
+//
+// Parameters:
+//   - id: The revision ID for tracking purposes
+//   - author: The author of the revision
+//   - date: Optional date string for the revision (can be nil)
+//
+// Example:
+//
+//	paragraph.Style("Heading1")
+//	paragraph.Justification(stypes.JustificationCenter)
+//	// Now clone current properties to revision
+//	paragraph.ClonePropertyToRevision(1, "John Doe", nil)
+//	// Make changes to current properties
+//	paragraph.Style("Normal")
+//	paragraph.Justification(stypes.JustificationLeft)
+func (p *Paragraph) ClonePropertyToRevision(author string, date *string) {
+	p.ensureProp()
+
+	id := p.root.Document.IncAnnotationID()
+
+	// Clone current properties (excluding existing PPrChange)
+	clonedProps := p.ct.Property.Clone()
+
+	// Create new PPrChange with cloned properties
+	p.ct.Property.PPrChange = &ctypes.PPrChange{
+		TrackChange: ctypes.TrackChange{
+			ID:     id,
+			Author: author,
+			Date:   date,
+		},
+		ParaProp: clonedProps,
+	}
+}
+
+func (p *Paragraph) scanBookmarkIds() {
+	for _, child := range p.ct.Children {
+		if child.Bookmark != nil {
+			if child.Bookmark.Start != nil {
+				p.root.Document.UpdateBookmarkID(child.Bookmark.Start.ID)
+			}
+			if child.Bookmark.End != nil {
+				p.root.Document.UpdateBookmarkID(child.Bookmark.End.ID)
+			}
+		}
+		if child.Link != nil {
+			l := Hyperlink{
+				root: p.root,
+				ct:   child.Link,
+			}
+			l.scanBookmarkIds()
+		}
+	}
+}
+
+func (p *Paragraph) scanAnnotationIds() {
+	for _, child := range p.ct.Children {
+		if child.Run != nil {
+			if child.Run.Property != nil && child.Run.Property.RPrChange != nil {
+				p.root.Document.updateAnnotationID(child.Run.Property.RPrChange.ID)
+			}
+		}
+		if child.Change != nil {
+			p.root.Document.updateAnnotationID(child.Change.ID)
+		}
+	}
 }

@@ -125,16 +125,14 @@ type RunProperty struct {
 
 	//39.Office Open XML Math
 	OMath *OnOff `xml:"oMath,omitempty"`
+
+	// 17.13.5.31 rPrChange (Revision Information for Run Properties)
+	RPrChange *RPrChange `xml:"rPrChange,omitempty"`
 }
 
 // NewRunProperty creates a new RunProperty with default values.
 func NewRunProperty() RunProperty {
 	return RunProperty{}
-}
-
-type optBoolElems struct {
-	elem    *OnOff
-	XMLName string
 }
 
 // MarshalXML marshals RunProperty to XML.
@@ -161,7 +159,10 @@ func (rp RunProperty) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 		}
 	}
 
-	set1 := []optBoolElems{
+	set1 := []struct {
+		elem    *OnOff
+		XMLName string
+	}{
 		{rp.Bold, "w:b"},                //3.Bold
 		{rp.BoldCS, "w:bCs"},            //4.Complex Script Bold
 		{rp.Italic, "w:i"},              //5.Italics
@@ -366,5 +367,280 @@ func (rp RunProperty) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 		}
 	}
 
+	//rPrChange
+	if rp.RPrChange != nil {
+		if err = rp.RPrChange.MarshalXML(e, xml.StartElement{
+			Name: xml.Name{Local: "w:rPrChange"},
+		}); err != nil {
+			return fmt.Errorf("rPrChange: %w", err)
+		}
+	}
+
 	return e.EncodeToken(start.End())
+}
+
+// Clone creates a deep copy of the RunProperty.
+// Note: This method ignores any existing rPrChange to avoid creating history of history.
+func (rp RunProperty) Clone() *RunProperty {
+	clone := &RunProperty{}
+
+	// Clone simple pointer fields
+	if rp.Style != nil {
+		clone.Style = &CTString{Val: rp.Style.Val}
+	}
+
+	// Clone RunFonts
+	if rp.Fonts != nil {
+		clone.Fonts = &RunFonts{
+			Hint:          rp.Fonts.Hint,
+			Ascii:         rp.Fonts.Ascii,
+			HAnsi:         rp.Fonts.HAnsi,
+			EastAsia:      rp.Fonts.EastAsia,
+			CS:            rp.Fonts.CS,
+			AsciiTheme:    rp.Fonts.AsciiTheme,
+			HAnsiTheme:    rp.Fonts.HAnsiTheme,
+			EastAsiaTheme: rp.Fonts.EastAsiaTheme,
+			CSTheme:       rp.Fonts.CSTheme,
+		}
+	}
+
+	// Clone OnOff boolean fields
+	if rp.Bold != nil {
+		clone.Bold = &OnOff{Val: rp.Bold.Val}
+	}
+	if rp.BoldCS != nil {
+		clone.BoldCS = &OnOff{Val: rp.BoldCS.Val}
+	}
+	if rp.Italic != nil {
+		clone.Italic = &OnOff{Val: rp.Italic.Val}
+	}
+	if rp.ItalicCS != nil {
+		clone.ItalicCS = &OnOff{Val: rp.ItalicCS.Val}
+	}
+	if rp.Caps != nil {
+		clone.Caps = &OnOff{Val: rp.Caps.Val}
+	}
+	if rp.SmallCaps != nil {
+		clone.SmallCaps = &OnOff{Val: rp.SmallCaps.Val}
+	}
+	if rp.Strike != nil {
+		clone.Strike = &OnOff{Val: rp.Strike.Val}
+	}
+	if rp.DoubleStrike != nil {
+		clone.DoubleStrike = &OnOff{Val: rp.DoubleStrike.Val}
+	}
+	if rp.Outline != nil {
+		clone.Outline = &OnOff{Val: rp.Outline.Val}
+	}
+	if rp.Shadow != nil {
+		clone.Shadow = &OnOff{Val: rp.Shadow.Val}
+	}
+	if rp.Emboss != nil {
+		clone.Emboss = &OnOff{Val: rp.Emboss.Val}
+	}
+	if rp.Imprint != nil {
+		clone.Imprint = &OnOff{Val: rp.Imprint.Val}
+	}
+	if rp.NoGrammar != nil {
+		clone.NoGrammar = &OnOff{Val: rp.NoGrammar.Val}
+	}
+	if rp.SnapToGrid != nil {
+		clone.SnapToGrid = &OnOff{Val: rp.SnapToGrid.Val}
+	}
+	if rp.Vanish != nil {
+		clone.Vanish = &OnOff{Val: rp.Vanish.Val}
+	}
+	if rp.WebHidden != nil {
+		clone.WebHidden = &OnOff{Val: rp.WebHidden.Val}
+	}
+	if rp.RightToLeft != nil {
+		clone.RightToLeft = &OnOff{Val: rp.RightToLeft.Val}
+	}
+	if rp.CSFormat != nil {
+		clone.CSFormat = &OnOff{Val: rp.CSFormat.Val}
+	}
+	if rp.SpecVanish != nil {
+		clone.SpecVanish = &OnOff{Val: rp.SpecVanish.Val}
+	}
+	if rp.OMath != nil {
+		clone.OMath = &OnOff{Val: rp.OMath.Val}
+	}
+
+	// Clone Color
+	if rp.Color != nil {
+		cloneColor := &Color{
+			Val:        rp.Color.Val,
+			ThemeColor: rp.Color.ThemeColor,
+			ThemeTint:  rp.Color.ThemeTint,
+			ThemeShade: rp.Color.ThemeShade,
+		}
+		clone.Color = cloneColor
+	}
+
+	// Clone numeric fields
+	if rp.Spacing != nil {
+		clone.Spacing = &DecimalNum{Val: rp.Spacing.Val}
+	}
+	if rp.Kern != nil {
+		clone.Kern = &Uint64Elem{Val: rp.Kern.Val}
+	}
+	if rp.Position != nil {
+		clone.Position = &DecimalNum{Val: rp.Position.Val}
+	}
+	if rp.Size != nil {
+		clone.Size = &FontSize{Value: rp.Size.Value}
+	}
+	if rp.SizeCs != nil {
+		clone.SizeCs = &FontSizeCS{Value: rp.SizeCs.Value}
+	}
+
+	// Clone string fields
+	if rp.Highlight != nil {
+		clone.Highlight = &CTString{Val: rp.Highlight.Val}
+	}
+
+	// Clone generic single string value fields
+	if rp.Underline != nil {
+		clone.Underline = &GenSingleStrVal[stypes.Underline]{Val: rp.Underline.Val}
+	}
+	if rp.VertAlign != nil {
+		clone.VertAlign = &GenSingleStrVal[stypes.VerticalAlignRun]{Val: rp.VertAlign.Val}
+	}
+	if rp.Em != nil {
+		clone.Em = &GenSingleStrVal[stypes.Em]{Val: rp.Em.Val}
+	}
+
+	// Clone complex fields (if they have Clone methods, use them; otherwise implement basic cloning)
+	if rp.ExpaComp != nil {
+		clone.ExpaComp = &ExpaComp{Val: rp.ExpaComp.Val}
+	}
+	if rp.Effect != nil {
+		clone.Effect = &Effect{Val: rp.Effect.Val}
+	}
+
+	// Clone Border (basic implementation - may need to be enhanced if Border has more complex fields)
+	if rp.Border != nil {
+		cloneBorder := &Border{
+			Val: rp.Border.Val,
+		}
+		if rp.Border.Color != nil {
+			borderColor := *rp.Border.Color
+			cloneBorder.Color = &borderColor
+		}
+		if rp.Border.ThemeColor != nil {
+			borderThemeColor := *rp.Border.ThemeColor
+			cloneBorder.ThemeColor = &borderThemeColor
+		}
+		if rp.Border.ThemeTint != nil {
+			borderThemeTint := *rp.Border.ThemeTint
+			cloneBorder.ThemeTint = &borderThemeTint
+		}
+		if rp.Border.ThemeShade != nil {
+			borderThemeShade := *rp.Border.ThemeShade
+			cloneBorder.ThemeShade = &borderThemeShade
+		}
+		if rp.Border.Size != nil {
+			borderSize := *rp.Border.Size
+			cloneBorder.Size = &borderSize
+		}
+		if rp.Border.Space != nil {
+			borderSpace := *rp.Border.Space
+			cloneBorder.Space = &borderSpace
+		}
+		if rp.Border.Shadow != nil {
+			borderShadow := *rp.Border.Shadow
+			cloneBorder.Shadow = &borderShadow
+		}
+		if rp.Border.Frame != nil {
+			borderFrame := *rp.Border.Frame
+			cloneBorder.Frame = &borderFrame
+		}
+		clone.Border = cloneBorder
+	}
+
+	// Clone Shading
+	if rp.Shading != nil {
+		cloneShading := &Shading{
+			Val: rp.Shading.Val,
+		}
+		if rp.Shading.Color != nil {
+			shadingColor := *rp.Shading.Color
+			cloneShading.Color = &shadingColor
+		}
+		if rp.Shading.ThemeColor != nil {
+			shadingThemeColor := *rp.Shading.ThemeColor
+			cloneShading.ThemeColor = &shadingThemeColor
+		}
+		if rp.Shading.ThemeFill != nil {
+			shadingThemeFill := *rp.Shading.ThemeFill
+			cloneShading.ThemeFill = &shadingThemeFill
+		}
+		if rp.Shading.ThemeTint != nil {
+			shadingThemeTint := *rp.Shading.ThemeTint
+			cloneShading.ThemeTint = &shadingThemeTint
+		}
+		if rp.Shading.ThemeShade != nil {
+			shadingThemeShade := *rp.Shading.ThemeShade
+			cloneShading.ThemeShade = &shadingThemeShade
+		}
+		if rp.Shading.Fill != nil {
+			shadingFill := *rp.Shading.Fill
+			cloneShading.Fill = &shadingFill
+		}
+		if rp.Shading.ThemeFillTint != nil {
+			shadingThemeFillTint := *rp.Shading.ThemeFillTint
+			cloneShading.ThemeFillTint = &shadingThemeFillTint
+		}
+		if rp.Shading.ThemeFillShade != nil {
+			shadingThemeFillShade := *rp.Shading.ThemeFillShade
+			cloneShading.ThemeFillShade = &shadingThemeFillShade
+		}
+		clone.Shading = cloneShading
+	}
+
+	// Clone FitText (basic implementation)
+	if rp.FitText != nil {
+		clone.FitText = &FitText{ID: rp.FitText.ID, Val: rp.FitText.Val}
+	}
+
+	// Clone Lang (basic implementation)
+	if rp.Lang != nil {
+		cloneLang := &Lang{
+			Val:      rp.Lang.Val,
+			EastAsia: rp.Lang.EastAsia,
+			Bidi:     rp.Lang.Bidi,
+		}
+		clone.Lang = cloneLang
+	}
+
+	// Clone EALayout (basic implementation)
+	if rp.EALayout != nil {
+		cloneEALayout := &EALayout{}
+		if rp.EALayout.ID != nil {
+			eaLayoutID := *rp.EALayout.ID
+			cloneEALayout.ID = &eaLayoutID
+		}
+		if rp.EALayout.Combine != nil {
+			eaLayoutCombine := *rp.EALayout.Combine
+			cloneEALayout.Combine = &eaLayoutCombine
+		}
+		if rp.EALayout.CombineBrkts != nil {
+			eaLayoutCombineBrkts := *rp.EALayout.CombineBrkts
+			cloneEALayout.CombineBrkts = &eaLayoutCombineBrkts
+		}
+		if rp.EALayout.Vert != nil {
+			eaLayoutVert := *rp.EALayout.Vert
+			cloneEALayout.Vert = &eaLayoutVert
+		}
+		if rp.EALayout.VertCompress != nil {
+			eaLayoutVertCompress := *rp.EALayout.VertCompress
+			cloneEALayout.VertCompress = &eaLayoutVertCompress
+		}
+		clone.EALayout = cloneEALayout
+	}
+
+	// Note: We intentionally do NOT clone any existing rPrChange to avoid creating history of history
+	// This ensures that when this method is used for revision tracking, we get a clean snapshot
+
+	return clone
 }

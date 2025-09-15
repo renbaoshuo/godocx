@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"time"
 
 	"github.com/gomutex/godocx/common/constants"
 )
@@ -52,76 +51,67 @@ func (rd *RootDoc) writeToZip(zw *zip.Writer) error {
 		files []string
 	)
 
-	// Build a local deterministic snapshot rather than mutating rd.FileMap while writing
-	snapshot := make(map[string][]byte)
-
 	ct, err := marshal(rd.ContentType)
 	if err != nil {
 		return err
 	}
-	snapshot[constants.ConentTypeFileIdx] = []byte(ct)
+	rd.FileMap.Store(constants.ConentTypeFileIdx, []byte(ct))
 
 	docRelContent, err := marshal(rd.Document.DocRels)
 	if err != nil {
 		return err
 	}
-	snapshot[rd.Document.DocRels.RelativePath] = docRelContent
+	rd.FileMap.Store(rd.Document.DocRels.RelativePath, docRelContent)
 
 	rootRelContent, err := marshal(rd.RootRels)
 	if err != nil {
 		return err
 	}
-	snapshot[rd.RootRels.RelativePath] = rootRelContent
+	rd.FileMap.Store(rd.RootRels.RelativePath, rootRelContent)
 
 	docContent, err := marshal(rd.Document)
 	if err != nil {
 		return err
 	}
-	snapshot[rd.Document.relativePath] = docContent
+	rd.FileMap.Store(rd.Document.relativePath, docContent)
 
-	docStyleBytes, err := marshal(rd.DocStyles)
-	if err != nil {
-		return err
-	}
-	snapshot[rd.DocStyles.RelativePath] = docStyleBytes
-
-	// Persist numbering instances into numbering.xml if any
-	if rd.Numbering != nil {
-		// Apply numbering into a temporary buffer based on either existing or minimal content
-		// by temporarily swapping root to a shallow copy with only the snapshot layer.
-		// Minimal change: read existing numbering.xml if present from rd.FileMap, else let manager create it.
-		if err := rd.Numbering.applyToFileMap(); err != nil {
+	if rd.DocSettings != nil {
+		docSettingsContent, err := marshal(rd.DocSettings)
+		if err != nil {
 			return err
 		}
+		rd.FileMap.Store(rd.DocSettings.RelativePath, docSettingsContent)
 	}
 
-	// Collect files from original map
-	rd.FileMap.Range(func(path, content any) bool {
-		p := path.(string)
-		if _, exists := snapshot[p]; !exists {
-			snapshot[p] = content.([]byte)
+	if rd.DocStyles != nil {
+		docStyleBytes, err := marshal(rd.DocStyles)
+		if err != nil {
+			return err
 		}
+		rd.FileMap.Store(rd.DocStyles.RelativePath, docStyleBytes)
+	}
+
+	if rd.Footnotes != nil {
+		docFootnoteBytes, err := marshal(rd.Footnotes)
+		if err != nil {
+			return err
+		}
+		rd.FileMap.Store(rd.Footnotes.RelativePath, docFootnoteBytes)
+	}
+
+	rd.FileMap.Range(func(path, content any) bool {
+		files = append(files, path.(string))
 		return true
 	})
 
-	// Now gather list of paths from snapshot
-	for p := range snapshot {
-		files = append(files, p)
-	}
-
 	sort.Strings(files)
 	for _, path := range files {
-		// Use a deterministic timestamp for reproducible archives
-		hdr := &zip.FileHeader{
-			Name:     path,
-			Method:   zip.Deflate,
-			Modified: time.Unix(0, 0).UTC(),
-		}
 		var fi io.Writer
-		if fi, err = zw.CreateHeader(hdr); err != nil {
+		if fi, err = zw.Create(path); err != nil {
 			break
 		}
-		_, err = fi.Write(snapshot[path])
+		content, _ := rd.FileMap.Load(path)
+		_, err = fi.Write(content.([]byte))
 	}
 
 	return err

@@ -9,7 +9,9 @@ const (
 	OFFICE_DOC_TYPE    = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
 	CORE_PROP_TYPE     = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties"
 	EXTENDED_PROP_TYPE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties"
-	StylesType         = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"
+	SETTINGS_TYPE      = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings"
+	STYLES_TYPE        = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"
+	FOOTNOTES_TYPE     = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes"
 )
 
 var (
@@ -31,7 +33,11 @@ var (
 )
 
 const (
-	XMLNS          = `http://schemas.openxmlformats.org/package/2006/relationships`
+	XMLNS = `http://schemas.openxmlformats.org/package/2006/relationships`
+)
+
+const (
+	// HyperLinkStyle is the style name for hyperlinks in Word documents.
 	HyperLinkStyle = "Hyperlink"
 )
 

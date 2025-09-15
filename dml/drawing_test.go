@@ -24,7 +24,7 @@ func TestMarshalDrawing(t *testing.T) {
 	}{
 		{
 			drawing: &Drawing{
-				Inline: []Inline{
+				Inline: []*Inline{
 					{
 						DistT: 2,
 						DistB: 3,
@@ -117,7 +117,7 @@ func TestUnmarshalDrawing(t *testing.T) {
 		{
 			inputXML: `<w:drawing xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:inline distT="2" distB="3" distL="4" distR="5"><wp:extent cx="100" cy="200"></wp:extent><wp:docPr id="1" name="Document Property" descr="This is a document property"></wp:docPr><wp:cNvGraphicFramePr><a:graphicFrameLocks  noChangeAspect="1"></a:graphicFrameLocks></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"></a:graphic></wp:inline><wp:anchor behindDoc="9" distT="2" distB="3" distL="4" distR="5" simplePos="1" locked="10" layoutInCell="6" allowOverlap="7" relativeHeight="8"><wp:extent cx="100" cy="200"></wp:extent><wp:effectExtent l="1" t="2" r="3" b="4"></wp:effectExtent><wp:wrapNone></wp:wrapNone></wp:anchor></w:drawing>`,
 			expectedDrawing: Drawing{
-				Inline: []Inline{
+				Inline: []*Inline{
 					{
 						DistT: 2,
 						DistB: 3,

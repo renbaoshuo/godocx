@@ -121,8 +121,10 @@ func TestParagraphProp_MarshalUnmarshal(t *testing.T) {
 		},
 		Justification: NewGenSingleStrVal(stypes.JustificationCenter),
 		PPrChange: &PPrChange{
-			ID:     1,
-			Author: "authortest",
+			TrackChange: TrackChange{
+				ID:     1,
+				Author: "authortest",
+			},
 		},
 		SectPr: &SectionProp{
 			TitlePg: NewGenSingleStrVal(stypes.OnOffTrue),
@@ -294,34 +296,40 @@ func TestPPrChange_MarshalXML(t *testing.T) {
 		{
 			name: "With all attributes",
 			input: PPrChange{
-				ID:       123,
-				Author:   "John Doe",
-				Date:     internal.ToPtr("2024-06-19"),
+				TrackChange: TrackChange{
+					ID:     123,
+					Author: "John Doe",
+					Date:   internal.ToPtr("2024-06-19"),
+				},
 				ParaProp: &ParagraphProp{
 					// Initialize ParagraphProp fields here if needed
 				},
 			},
-			expected: `<w:pPrChange id="123" author="John Doe" date="2024-06-19"><w:pPr></w:pPr></w:pPrChange>`,
+			expected: `<w:pPrChange w:id="123" w:author="John Doe" w:date="2024-06-19"><w:pPr></w:pPr></w:pPrChange>`,
 		},
 		{
 			name: "Without date attribute",
 			input: PPrChange{
-				ID:       456,
-				Author:   "Jane Smith",
+				TrackChange: TrackChange{
+					ID:     456,
+					Author: "Jane Smith",
+				},
 				ParaProp: &ParagraphProp{
 					// Initialize ParagraphProp fields here if needed
 				},
 			},
-			expected: `<w:pPrChange id="456" author="Jane Smith"><w:pPr></w:pPr></w:pPrChange>`,
+			expected: `<w:pPrChange w:id="456" w:author="Jane Smith"><w:pPr></w:pPr></w:pPrChange>`,
 		},
 		{
 			name: "Without paraProp",
 			input: PPrChange{
-				ID:     789,
-				Author: "Alice Brown",
-				Date:   internal.ToPtr("2024-06-20"),
+				TrackChange: TrackChange{
+					ID:     789,
+					Author: "Alice Brown",
+					Date:   internal.ToPtr("2024-06-20"),
+				},
 			},
-			expected: `<w:pPrChange id="789" author="Alice Brown" date="2024-06-20"></w:pPrChange>`,
+			expected: `<w:pPrChange w:id="789" w:author="Alice Brown" w:date="2024-06-20"></w:pPrChange>`,
 		},
 	}
 

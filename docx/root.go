@@ -15,11 +15,12 @@ type RootDoc struct {
 	FileMap     sync.Map      // FileMap is a synchronized map for managing files related to the document.
 	RootRels    Relationships // RootRels represents relationships at the root level.
 	ContentType ContentTypes
-	Document    *Document      // Document is the main document structure.
-	DocStyles   *ctypes.Styles // Document styles
-	Numbering   *NumberingManager // Numbering manager for list instances
+	Document    *Document                // Document is the main document structure.
+	DocStyles   *ctypes.Styles           // Document styles
+	DocSettings *ctypes.DocumentSettings // Document settings
+	Footnotes   *ctypes.Footnotes        // Footnotes contains footnotes in the document.
+	Numbering   *NumberingManager        // Numbering manager for list instances
 
-	rID        int // rId is used to generate unique relationship IDs.
 	ImageCount uint
 }
 
@@ -53,6 +54,18 @@ func LoadDocXml(rd *RootDoc, fileName string, fileBytes []byte) (*Document, erro
 	return &doc, nil
 }
 
+// Load settings.xml into Settings struct
+func LoadDocumentSettings(fileName string, fileBytes []byte) (*ctypes.DocumentSettings, error) {
+	settings := ctypes.DocumentSettings{}
+	err := xml.Unmarshal(fileBytes, &settings)
+	if err != nil {
+		return nil, err
+	}
+
+	settings.RelativePath = fileName
+	return &settings, nil
+}
+
 // Load styles.xml into Styles struct
 func LoadStyles(fileName string, fileBytes []byte) (*ctypes.Styles, error) {
 	styles := ctypes.Styles{}
@@ -63,6 +76,17 @@ func LoadStyles(fileName string, fileBytes []byte) (*ctypes.Styles, error) {
 
 	styles.RelativePath = fileName
 	return &styles, nil
+}
+
+func LoadFootnotes(fileName string, fileBytes []byte) (*ctypes.Footnotes, error) {
+	footnotes := ctypes.Footnotes{}
+	err := xml.Unmarshal(fileBytes, &footnotes)
+	if err != nil {
+		return nil, err
+	}
+
+	footnotes.RelativePath = fileName
+	return &footnotes, nil
 }
 
 // NewListInstance creates a new numbering instance for the given abstract numbering ID.

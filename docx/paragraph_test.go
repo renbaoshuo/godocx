@@ -130,7 +130,7 @@ func TestParagraph_AddText(t *testing.T) {
 		t.Helper()
 
 		p := &Paragraph{
-			ct: ctypes.Paragraph{
+			ct: &ctypes.Paragraph{
 				Children: []ctypes.ParagraphChild{},
 			},
 		}
@@ -154,7 +154,7 @@ func TestParagraph_AddText(t *testing.T) {
 
 func TestParagraph_AddRun(t *testing.T) {
 	p := &Paragraph{
-		ct: ctypes.Paragraph{
+		ct: &ctypes.Paragraph{
 			Children: []ctypes.ParagraphChild{},
 		},
 	}
